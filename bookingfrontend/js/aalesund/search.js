@@ -6,7 +6,6 @@ var months;
 var urlParams = [];
 var autocompleteData = [];
 var towns = [];
-var limit = 50;
 
 var monthList = [ 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -109,8 +108,8 @@ function ViewModel()
 		});
 		self.selectedTowns(newSelectedTowns);
 
-		if (viewmodel.showResults()) {
-			findSearchMethod();
+		if (viewmodel.showResults() && autoUpdate) {
+			updateResults();
 		}
 	});
 
@@ -178,7 +177,8 @@ function updateResults() {
 	let matchingActivities = new Set();
 
 	for(let i = 0; i < searchResults.length; i++) {
-		if (viewmodel.selectedFacilities().every(r=>searchResults[i].facilities.includes(r)) && viewmodel.selectedActivities().every(r=>searchResults[i].activities.includes(r))) {
+		if (viewmodel.selectedFacilities().every(r=>searchResults[i].facilities.includes(r)) && viewmodel.selectedActivities().every(r=>searchResults[i].activities.includes(r))
+		&& (viewmodel.selectedTowns().length === 0 || viewmodel.selectedTowns().some(r=>searchResults[i].town_id === r))) {
 			matchingResources.push(searchResults[i]);
 			matchingFacilities = new Set([... matchingFacilities, ...searchResults[i].facilities]);
 			matchingActivities = new Set([... matchingActivities, ...searchResults[i].activities]);
@@ -188,27 +188,26 @@ function updateResults() {
 	matchingFacilities = Array.from(matchingFacilities);
 	matchingActivities = Array.from(matchingActivities);
 
-	let keepFilterVals = [];
 	ko.utils.arrayForEach(viewmodel.facilities(), function(facility) {
 		if (matchingFacilities.includes(facility.id)) {
 			facility.enabled = true;
 		} else {
 			if (viewmodel.selectedFacilityIds().includes(facility.id)) {
 				console.log("checked but should be unchecked");
-				keepFilterVals.push(facility.id);
+				viewmodel.selectedFacilityIds.remove(facility.id);
 			}
 			facility.enabled = false;
 		}
 	});
 
-	keepFilterVals = [];
 	ko.utils.arrayForEach(viewmodel.activities(), function(activity) {
 		if (matchingActivities.includes(activity.id)) {
 			activity.enabled = true;
 		} else {
 			if (viewmodel.selectedActivityIds().includes(activity.id)) {
 				console.log("checked but should be unchecked");
-				keepFilterVals.push(activity.id);
+				viewmodel.selectedActivityIds.remove(activity.id);
+
 			}
 			activity.enabled = false;
 		}
@@ -238,13 +237,13 @@ function validateFilters() {
 	if (viewmodel.activities().length === 0) {
 		viewmodel.selectedActivityIds.removeAll();
 	} else {
-	let keepFilterVals = [];
-	ko.utils.arrayForEach(viewmodel.selectedActivityIds(), function(activityId) {
-		if (viewmodel.activities().filter(function(e) {return e.id === activityId; }).length !== 0) {
-			keepFilterVals.push(activityId);
-		}
-	});
-	viewmodel.selectedActivityIds(keepFilterVals);
+		let keepFilterVals = [];
+		ko.utils.arrayForEach(viewmodel.selectedActivityIds(), function(activityId) {
+			if (viewmodel.activities().filter(function(e) {return e.id === activityId; }).length !== 0) {
+				keepFilterVals.push(activityId);
+			}
+		});
+		viewmodel.selectedActivityIds(keepFilterVals);
 	}
 }
 
@@ -290,12 +289,10 @@ function doSearch(url, params) {
 	let time = findTime()
 
 	let data = {
-		part_of_town_id: viewmodel.selectedTowns,
 		from_date: dates[0] + ' 00:00:00',
 		to_date: dates[1] + ' 23:59:00',
 		from_time: time[0],
 		to_time: time[1],
-		limit: limit
 	};
 
 	Object.assign(data, params);
@@ -324,7 +321,7 @@ function doSearch(url, params) {
 			setFacilityData(response.facilities);
 			setActivityData(response.activities);
 
-			if (viewmodel.selectedFacilityIds().length > 0 || viewmodel.selectedActivityIds().length > 0) {
+			if (viewmodel.selectedFacilityIds().length > 0 || viewmodel.selectedActivityIds().length > 0 || viewmodel.selectedTownIds().length > 0) {
 				autoUpdate = false;
 				validateFilters();
 				updateResults();
@@ -518,11 +515,6 @@ function getUpcomingEvents() {
 	});
 }
 
-function showMore() {
-	limit += 20;
-	findSearchMethod();
-}
-
 function setSearchListener() {
 
 	$('#mainSearchInput').keyup(function (e)
@@ -675,7 +667,7 @@ function setEventData(result) {
 
 function setResources(resources) {
 	searchResults = [];
-		for (let i = 0; i < resources.length; i++) {
+		for (let i = 0; typeof resources !== 'undefined' && i < resources.length; i++) {
 			let dates = splitDateIntoDateAndTime(resources[i].from, resources[i].to);
 
 			searchResults.push({
@@ -693,7 +685,7 @@ function setResources(resources) {
 				application_url: phpGWLink('bookingfrontend/', {menuaction: "bookingfrontend.uiapplication.add", building_id: resources[i].building_id, resource_id: resources[i].resource_id}, false),
 				activities: resources[i].activities,
 				facilities: resources[i].facilities,
-				town_id: resources[i].part_of_town_id
+				town_id: parseInt(resources[i].part_of_town_id)
 			});
 		}
 	viewmodel.resources(searchResults);
@@ -722,7 +714,7 @@ function splitDateIntoDateAndTime(from, to) {
 }
 
 function setTownData(towns) {
-	if (towns.length !== 0) {
+	if (typeof towns !== 'undefined' && towns.length !== 0) {
 		towns.sort(compare);
 		for (let i = 0; i < towns.length; i++) {
 			let lower = towns[i].name.toLowerCase();
@@ -738,7 +730,7 @@ function setTownData(towns) {
 }
 
 function setFacilityData(facilities) {
-	if (facilities.length !== 0) {
+	if (typeof facilities !== 'undefined' && facilities.length !== 0) {
 		for (let i = 0; i < facilities.length; i++) {
 			viewmodel.facilities.push({
 				name: facilities[i].name,
@@ -752,7 +744,7 @@ function setFacilityData(facilities) {
 }
 
 function setActivityData(activities) {
-	if (activities.length !== 0) {
+	if (typeof activities !== 'undefined' &&  activities.length !== 0) {
 		for (let i = 0; i < activities.length; i++) {
 			viewmodel.activities.push({
 				name: activities[i].name,

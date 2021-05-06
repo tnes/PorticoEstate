@@ -664,6 +664,7 @@
 
 			$all_activities = array();
 			$all_facilities = array();
+			$all_part_of_towns = array();
 			foreach ($returnres['available_resources'] as $resource)
 			{
 				foreach ($resource['activities_list'] as $activity)
@@ -681,13 +682,23 @@
 						$all_facilities[$facility['id']] = array('id' => $facility['id'], 'name' => $facility['name']);
 					}
 				}
+
+				if (!array_key_exists($resource['part_of_town_id'], $all_part_of_towns))
+				{
+					$all_part_of_towns[$resource['part_of_town_id']] = array (
+						'id' => $partoftownlist[$resource['part_of_town_id']]['id'],
+						'name' => $partoftownlist[$resource['part_of_town_id']]['name']
+					);
+				}
 			}
 
 			usort($all_activities, function ($a,$b) { return strcmp(strtolower($a['name']),strtolower($b['name'])); });
 			usort($all_facilities, function ($a,$b) { return strcmp(strtolower($a['name']),strtolower($b['name'])); });
+			usort($all_part_of_towns, function ($a,$b) { return strcmp(strtolower($a['name']),strtolower($b['name'])); });
 
 			$returnres['activities']  = $all_activities;
 			$returnres['facilities']  = $all_facilities;
+			$returnres['partoftowns'] = $all_part_of_towns;
 
 			return $returnres;
 		}
@@ -801,6 +812,7 @@
 
 			$all_activities = array();
 			$all_facilities = array();
+			$all_part_of_towns = array();
 			foreach ($returnres['available_resources'] as $resource)
 			{
 				foreach ($resource['activities_list'] as $activity)
@@ -818,13 +830,23 @@
 						$all_facilities[$facility['id']] = array('id' => $facility['id'], 'name' => $facility['name']);
 					}
 				}
+
+				if (!array_key_exists($resource['part_of_town_id'], $all_part_of_towns))
+				{
+					$all_part_of_towns[$resource['part_of_town_id']] = array (
+						'id' => $partoftownlist[$resource['part_of_town_id']]['id'],
+						'name' => $partoftownlist[$resource['part_of_town_id']]['name']
+					);
+				}
 			}
 
 			usort($all_activities, function ($a,$b) { return strcmp(strtolower($a['name']),strtolower($b['name'])); });
 			usort($all_facilities, function ($a,$b) { return strcmp(strtolower($a['name']),strtolower($b['name'])); });
+			usort($all_part_of_towns, function ($a,$b) { return strcmp(strtolower($a['name']),strtolower($b['name'])); });
 
 			$returnres['activities'] = $all_activities;
 			$returnres['facilities'] = $all_facilities;
+			$returnres['partoftowns'] = $all_part_of_towns;
 			return $returnres;
 		}
 

@@ -286,11 +286,6 @@
 										</div>
 									</div>
 								</div>
-								<div class="showMoreContainer" data-bind="if: resources().length === limit">
-									<span class="showMoreText" onclick="showMore()">
-										<xsl:value-of select="php:function('lang', 'Show more results')"/>
-									</span>
-								</div>
 							</div>
 						</div>
 					</div>
